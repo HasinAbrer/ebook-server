@@ -1,8 +1,17 @@
-import {add} from './test/math'
+import express from 'express'
 
-const a = 1
+const app = express()
 
-const b = 2
+const port = process.env.PORT || 8989
 
-// this is going to add a and b and log it to the console
-console.log ("This is the final result :", add(a, b))
+app.get('/', (request, response) => {
+    response.send ("<h1>This is our App!</h1>")
+})
+
+app.get('/login', (request, response) => {
+    response.send ("<h1>This is login page!</h1>")
+})
+
+app.listen(port, () => {
+    console.log(`The application is runnning on port http://localhost:${port}`)
+})
