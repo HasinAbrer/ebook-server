@@ -1,3 +1,4 @@
+import "src/db/connect"
 import express from "express";
 import authRouter from "./routes/auth";
 
