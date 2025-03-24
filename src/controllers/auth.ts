@@ -1,7 +1,9 @@
 import { Request, Response, RequestHandler } from "express";
 import crypto from 'crypto'
+import VerificationTokenModel from "src/models/verificationToken";
+import UserModel from "src/models/user";
 
-export const generateAuthLink: RequestHandler = (req, res) => {
+export const generateAuthLink: RequestHandler = async (req, res) => {
   // Generate authentication link
   // and send the link to the users email address
 
@@ -14,9 +16,24 @@ export const generateAuthLink: RequestHandler = (req, res) => {
     5. Notify user to look inside the email to get the login link
   */
 
+    const {email} = req.body
+    let user =  await UserModel.findOne({email});
+    if(!user) {
+      // if no user found create new user
+      user = await UserModel.create({email})
+    }
+
+    const userId = user._id.toString()
+
+    // if we already have token for this user it will remove that first
+    await VerificationTokenModel.findOneAndDelete({userId})
+
   const randomToken = crypto.randomBytes(36).toString("hex")
 
-  console.log(req.body) 
+  await VerificationTokenModel.create<{userId: string}>({
+    userId,
+    token: randomToken,
+  })
 
   res.json({ ok: true });
 };
