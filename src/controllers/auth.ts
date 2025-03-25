@@ -3,11 +3,12 @@ import crypto from "crypto";
 import nodemailer from "nodemailer";
 import VerificationTokenModel from "src/models/verificationToken";
 import UserModel from "src/models/user";
-import { link } from "fs";
+import mail from "src/utils/mail";
+import { sendErrorResponse } from "src/utils/helper";
 
 export const generateAuthLink: RequestHandler = async (req, res) => {
   // Generate authentication link
-  // and send the link to the users email address
+  // and send that link to the users email address
 
   /*
     1. Generate Unique token for every users
@@ -21,7 +22,7 @@ export const generateAuthLink: RequestHandler = async (req, res) => {
   const { email } = req.body;
   let user = await UserModel.findOne({ email });
   if (!user) {
-    // if no user found create new user
+    // if no user found then create new user.
     user = await UserModel.create({ email });
   }
 
@@ -37,27 +38,48 @@ export const generateAuthLink: RequestHandler = async (req, res) => {
     token: randomToken,
   });
 
-  const transport = nodemailer.createTransport({
-    host: "sandbox.smtp.mailtrap.io",
-    port: 2525,
-    auth: {
-      user: "35910820504a21",
-      pass: "d44838fff49246",
-    },
-  });
+  const link = `${process.env.VERIFICATION_LINK}?token=${randomToken}&userId=${userId}`;
 
-  const link = `http://localhost:8989/verify?token=${randomToken}&userId=${userId}`;
-
-  await transport.sendMail({
+  await mail.sendVerificationMail({
+    link,
     to: user.email,
-    from: "verification@myapp.com",
-    subject: "Auth Verification",
-    html: `
-  <div> 
-    <p>Please click on <a href="${link}">this link</a> to verify the account.</p>
-  </div>
-  `,
   });
 
-  res.json({ message: "Please check your email for link!" });
+  res.json({ message: "Please check you email for link." });
+};
+
+export const verifyAuthToken: RequestHandler = async (req, res) => {
+  const { token, userId } = req.query;
+
+  if (typeof token !== "string" || typeof userId !== "string") {
+    return sendErrorResponse({
+      status: 403,
+      message: "Invalid request!",
+      res,
+    });
+  }
+
+  const verificationToken = await VerificationTokenModel.findOne({ userId });
+  if (!verificationToken || !verificationToken.compare(token)) {
+    return sendErrorResponse({
+      status: 403,
+      message: "Invalid request, token mismatch!",
+      res,
+    });
+  }
+
+  const user = await UserModel.findById(userId);
+  if (!user) {
+    return sendErrorResponse({
+      status: 500,
+      message: "Something went wrong, user not found!",
+      res,
+    });
+  }
+
+  await VerificationTokenModel.findByIdAndDelete(verificationToken._id);
+
+  // Authentication
+
+  res.json({});
 };

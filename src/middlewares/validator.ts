@@ -19,7 +19,6 @@ export const validate = <T extends ZodRawShape>(obj: T): RequestHandler => {
     if (result.success) {
       req.body = result.data;
       next();
-    //   return;
     } else {
       const errors = result.error.flatten().fieldErrors;
       res.status(422).json({ errors }); 
