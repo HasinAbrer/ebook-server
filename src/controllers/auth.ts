@@ -1,13 +1,15 @@
 import { Request, Response, RequestHandler } from "express";
-import crypto from 'crypto'
+import crypto from "crypto";
+import nodemailer from "nodemailer";
 import VerificationTokenModel from "src/models/verificationToken";
 import UserModel from "src/models/user";
+import { link } from "fs";
 
 export const generateAuthLink: RequestHandler = async (req, res) => {
   // Generate authentication link
   // and send the link to the users email address
 
-    /*
+  /*
     1. Generate Unique token for every users
     2. Store that token securely inside the database
        so that we can validate it in future.
@@ -16,24 +18,46 @@ export const generateAuthLink: RequestHandler = async (req, res) => {
     5. Notify user to look inside the email to get the login link
   */
 
-    const {email} = req.body
-    let user =  await UserModel.findOne({email});
-    if(!user) {
-      // if no user found create new user
-      user = await UserModel.create({email})
-    }
+  const { email } = req.body;
+  let user = await UserModel.findOne({ email });
+  if (!user) {
+    // if no user found create new user
+    user = await UserModel.create({ email });
+  }
 
-    const userId = user._id.toString()
+  const userId = user._id.toString();
 
-    // if we already have token for this user it will remove that first
-    await VerificationTokenModel.findOneAndDelete({userId})
+  // if we already have token for this user it will remove that first
+  await VerificationTokenModel.findOneAndDelete({ userId });
 
-  const randomToken = crypto.randomBytes(36).toString("hex")
+  const randomToken = crypto.randomBytes(36).toString("hex");
 
-  await VerificationTokenModel.create<{userId: string}>({
+  await VerificationTokenModel.create<{ userId: string }>({
     userId,
     token: randomToken,
-  })
+  });
 
-  res.json({ ok: true });
+  const transport = nodemailer.createTransport({
+    host: "sandbox.smtp.mailtrap.io",
+    port: 2525,
+    auth: {
+      user: "35910820504a21",
+      pass: "d44838fff49246",
+    },
+  });
+
+  const link = `http://localhost:8989/verify?token=${randomToken}&userId=${userId}`;
+
+  await transport.sendMail({
+    to: user.email,
+    from: "verification@myapp.com",
+    subject: "Auth Verification",
+    html: `
+  <div> 
+    <p>Please click on <a href="${link}">this link</a> to verify the account.</p>
+  </div>
+  `,
+  });
+
+  res.json({ message: "Please check your email for link!" });
 };
