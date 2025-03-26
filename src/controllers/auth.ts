@@ -5,6 +5,7 @@ import VerificationTokenModel from "src/models/verificationToken";
 import UserModel from "src/models/user";
 import mail from "src/utils/mail";
 import { sendErrorResponse } from "src/utils/helper";
+import jwt from 'jsonwebtoken'
 
 export const generateAuthLink: RequestHandler = async (req, res) => {
   // Generate authentication link
@@ -80,6 +81,11 @@ export const verifyAuthToken: RequestHandler = async (req, res) => {
   await VerificationTokenModel.findByIdAndDelete(verificationToken._id);
 
   // Authentication
+  const payload = {userId: user._id}
 
-  res.json({});
+  const authToken = jwt.sign(payload, process.env.JWT_SECRET!, {
+    expiresIn: '15d'
+  })
+
+  res.json({authToken});
 };
