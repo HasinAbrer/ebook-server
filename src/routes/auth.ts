@@ -1,6 +1,11 @@
-import { generateAuthLink, verifyAuthToken } from "src/controllers/auth";
+import {
+  generateAuthLink,
+  sendProfileInfo,
+  verifyAuthToken,
+} from "src/controllers/auth";
 import { emailValidationSchema, validate } from "src/middlewares/validator";
 import { Router } from "express";
+import { isAuth } from "src/middlewares/auth";
 
 const authRouter = Router();
 
@@ -9,6 +14,7 @@ authRouter.post(
   validate(emailValidationSchema),
   generateAuthLink
 );
-authRouter.get('/verify', verifyAuthToken)
+authRouter.get("/verify", verifyAuthToken);
+authRouter.get("/profile", isAuth, sendProfileInfo);
 
 export default authRouter;

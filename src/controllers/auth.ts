@@ -4,8 +4,9 @@ import nodemailer from "nodemailer";
 import VerificationTokenModel from "src/models/verificationToken";
 import UserModel from "src/models/user";
 import mail from "src/utils/mail";
-import { sendErrorResponse } from "src/utils/helper";
-import jwt from 'jsonwebtoken'
+import { formatUserProfile, sendErrorResponse } from "src/utils/helper";
+import jwt from "jsonwebtoken";
+import { profile } from "console";
 
 export const generateAuthLink: RequestHandler = async (req, res) => {
   // Generate authentication link
@@ -81,11 +82,30 @@ export const verifyAuthToken: RequestHandler = async (req, res) => {
   await VerificationTokenModel.findByIdAndDelete(verificationToken._id);
 
   // Authentication
-  const payload = {userId: user._id}
+  const payload = { userId: user._id };
 
   const authToken = jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: '15d'
-  })
+    expiresIn: "15d",
+  });
 
-  res.json({authToken});
+  res.cookie("authToken", authToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV !== "development",
+    sameSite: "strict",
+    expires: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+  });
+
+  // res.redirect(
+  //   `${process.env.AUTH_SUCCESS_URL}?profile=${JSON.stringify(
+  //     formatUserProfile(user)
+  //   )}`
+  // );
+
+  res.send();
+};
+
+export const sendProfileInfo: RequestHandler = (req, res) => {
+  res.json({
+    profile: req.user,
+  })
 };
